@@ -1,16 +1,14 @@
-variable "subnets" {
-  description = "Subnets IDs from subnet module"
-}
-
-variable "igw_id" {
-  description = "ID of IGW"
+variable "subnets_public" {
+  description = "Public subnets IDs from subnet module"
+  type        = list(string)
 }
 
 variable "vpc_id" {
   description = "VPC ID"
-  type = string
+  type        = string
 }
 
-variable "tags_common" {
-  description = "Common tags for all resources"
+variable "igw_id" {
+  description = "ID of IGW"
+  type        = string
 }

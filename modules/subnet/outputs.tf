@@ -1,34 +1,24 @@
+output "availability_zones" {
+  description = "The list of availability zones according with input number"
+  value       = slice(data.aws_availability_zones.working.names, 0, var.azs)
+}
+
 output "subnets_public" {
-  description = "ID of the public subnets"
-  value       = tomap({
-    for k, subnet in aws_subnet.public : k => {
-      az = subnet.availability_zone
-      subnet = subnet.id
-    }
-  })
+  description = "IDs of the public subnets"
+  value       = [for subnet in aws_subnet.public : subnet.id]
 }
 
 output "subnets_private" {
-  description = "ID of the private subnets"
-  value       = tomap({
-    for k, subnet in aws_subnet.private : k => {
-      az = subnet.availability_zone
-      subnet = subnet.id
-    }
-  })
+  description = "IDs of the all private subnets"
+  value       = [for subnet in aws_subnet.private : subnet.id]
+}
+
+output "subnets_private_ec2" {
+  description = "IDs of the ec2 private subnets"
+  value       = slice([for subnet in aws_subnet.private : subnet.id], 0, var.azs)
 }
 
 output "subnets_private_db" {
-  description = "ID of the private db subnets"
-  value       = tomap({
-    for k, subnet in aws_subnet.private_db : k => {
-      az = subnet.availability_zone
-      subnet = subnet.id
-    }
-  })
-}
-
-output "subnets_private_set" {
-  description = "ID of the private subnets for ASG"
-  value = toset([for subnet in aws_subnet.private: subnet.id])
+  description = "IDs of the DB private subnets"
+  value       = slice([for subnet in aws_subnet.private : subnet.id], var.azs, var.azs + var.azs)
 }

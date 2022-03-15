@@ -1,19 +1,17 @@
 resource "aws_lb" "cloudx" {
-  name               = var.lb_name
-  internal           = false
-  load_balancer_type = "application"
+  name               = var.name
+  internal           = var.lb_internal
+  load_balancer_type = var.lb_type
   security_groups    = [var.sg_lb]
 
   dynamic "subnet_mapping" {
-    for_each = var.subnets_public
+    for_each = toset(var.subnets_public)
     content {
-    subnet_id = subnet_mapping.value["subnet"]
+      subnet_id = subnet_mapping.value
     }
   }
 
-  enable_deletion_protection = true
-
-  tags = merge(var.tags_common, {Name = "${var.lb_name}"})
+  enable_deletion_protection = var.enable_deletion_protection
 }
 
 resource "aws_lb_listener" "cloudx" {
@@ -25,19 +23,15 @@ resource "aws_lb_listener" "cloudx" {
     type = "forward"
     forward {
       target_group {
-        arn    = aws_lb_target_group.cloudx.arn
+        arn = aws_lb_target_group.cloudx.arn
       }
     }
   }
-
-  tags = merge(var.tags_common, {Name = "${var.lb_listener_name}"})
 }
 
 resource "aws_lb_target_group" "cloudx" {
-  name     = var.target_group_name
+  name     = var.name
   port     = var.target_group_port
   protocol = var.target_group_protocol
   vpc_id   = var.vpc_id
-
-  tags = merge(var.tags_common, {Name = "${var.target_group_name}"})
 }

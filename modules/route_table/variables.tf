@@ -1,35 +1,35 @@
+variable "availability_zones" {
+  description = "The list of availability zones according with input number"
+  type        = list(string)
+}
+
 variable "subnets_public" {
-  description = "Subnets IDs from subnet module"
+  description = "Public subnets IDs from subnet module"
+  type        = list(string)
 }
 
 variable "subnets_private" {
-  description = "Subnets IDs from subnet module"
-}
-
-variable "subnets_private_db" {
-  description = "Subnets IDs from subnet module"
+  description = "Private subnets IDs from subnet module"
+  type        = list(string)
 }
 
 variable "nat_gw" {
   description = "List of NAT GW"
-}
-
-variable "tags_common" {
-  description = "Common tags for all resources"
+  type        = list(string)
 }
 
 variable "vpc_id" {
   description = "VPC ID"
-  type = string
+  type        = string
 }
 
 variable "igw_id" {
   description = "IGW ID"
-  type = string
+  type        = string
 }
 
 variable "cidr_block" {
   description = "CIDR block"
-  type = string
-  default = "0.0.0.0/0"
+  type        = string
+  default     = "0.0.0.0/0"
 }

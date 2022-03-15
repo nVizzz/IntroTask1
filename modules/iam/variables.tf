@@ -1,15 +1,14 @@
 variable "name" {
-  description = "The name of IAM role/policy/instance_profile"
+  description = "Name of the project"
+  type        = string
 }
 
 variable "policy_path" {
   description = "Path to the policy"
+  type        = string
 }
 
 variable "assume_role_policy_path" {
-  description = "Path to the assume_role_policy"
-}
-
-variable "tags_common" {
-  description = "Common tags for all resources"
+  description = "Path to the assume role policy"
+  type        = string
 }

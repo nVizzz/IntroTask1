@@ -1,9 +1,8 @@
 resource "aws_autoscaling_group" "cloudx" {
   name                = var.name
-  #desired_capacity    = 1
   max_size            = var.max_size
   min_size            = var.min_size
-  vpc_zone_identifier = var.subnets_private_set
+  vpc_zone_identifier = toset(var.subnets_private)
 
   launch_template {
     id = var.launch_template

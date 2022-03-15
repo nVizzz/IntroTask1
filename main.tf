@@ -8,150 +8,134 @@ terraform {
 }
 
 provider "aws" {
-  region = "us-east-1"
+  region = var.region
+
+  default_tags {
+    tags = {
+      Name        = var.project_name
+      Environment = "Development"
+      Terraform   = true
+      Project     = "CloudX"
+      Owner       = "Roman_Izvozchikov"
+    }
+  }
 }
 
 module "iam" {
+  name                    = var.project_name
   source                  = "./modules/iam"
-  name                    = "cloudx"
-  policy_path             = "files/ghost_app_policy.json"
-  assume_role_policy_path = "files/ghost_app_role_policy.json"
-  tags_common = var.tags_common
+  policy_path             = var.policy_path
+  assume_role_policy_path = var.assume_role_policy_path
 }
 
 module "vpc" {
-  source = "./modules/vpc"
-  tags_common = var.tags_common
+  source   = "./modules/vpc"
+  vpc_cidr = var.vpc_cidr
 }
 
 module "subnet" {
-  source = "./modules/subnet"
-  vpc_id = module.vpc.vpc_id
-  tags_common = var.tags_common
+  source          = "./modules/subnet"
+  azs             = var.azs
+  vpc_id          = module.vpc.vpc_id
+  subnets_public  = var.subnets_public
+  subnets_private = var.subnets_private
 }
 
 module "igw" {
   source = "./modules/igw"
   vpc_id = module.vpc.vpc_id
-  tags_common = var.tags_common
 }
 
 module "nat_gw" {
-  source  = "./modules/nat_gw"
-  subnets = module.subnet.subnets_public
-  igw_id  = module.igw.igw_id
-  vpc_id  = module.vpc.vpc_id
-  tags_common = var.tags_common
+  source         = "./modules/nat_gw"
+  subnets_public = module.subnet.subnets_public
+  vpc_id         = module.vpc.vpc_id
+  igw_id         = module.igw.igw_id
 }
 
 module "route_table" {
   source             = "./modules/route_table"
+  availability_zones = module.subnet.availability_zones
   nat_gw             = module.nat_gw.nat_gw
   subnets_public     = module.subnet.subnets_public
   subnets_private    = module.subnet.subnets_private
-  subnets_private_db = module.subnet.subnets_private_db
   vpc_id             = module.vpc.vpc_id
   igw_id             = module.igw.igw_id
-  tags_common = var.tags_common
 }
 
 module "sg" {
-  source = "./modules/sg"
-  public_inbound = {
-    http = {
-      protocol   = "tcp"
-      port       = 80
-      cidr_block = "0.0.0.0/0"
-    }
-  }
-  private_inbound = {
-    http = {
-      protocol   = "tcp"
-      port       = 8080
-      cidr_block = "0.0.0.0/0"
-    }
-  }
-  private_db_inbound = {
-    http = {
-      protocol   = "tcp"
-      port       = 8081
-      cidr_block = "0.0.0.0/0"
-    }
-  }
-  vpc_id = module.vpc.vpc_id
-  tags_common = var.tags_common
+  source              = "./modules/sg"
+  public_inbound      = var.public_inbound
+  public_outbound     = var.public_outbound
+  private_inbound     = var.private_inbound
+  private_outbound    = var.private_outbound
+  private_db_inbound  = var.private_db_inbound
+  private_db_outbound = var.private_db_outbound
+  vpc_id              = module.vpc.vpc_id
 }
 
 module "key_pair" {
   source  = "./modules/key_pair"
-  name    = "cloudx"
+  name    = var.project_name
   ssh_key = var.ssh_key
-  tags_common = var.tags_common
-}
-
-module "ssm_parameter" {
-  source = "./modules/ssm_parameter"
-  name = "/cloudx/dbpassw"
-  name_tag = "cloudx"
-  db_password = var.db_password
-  tags_common = var.tags_common
 }
 
 module "launch_template" {
-  source = "./modules/launch_template"
-  name = "cloudx"
-  instance_profile = module.iam.instance_profile
-  image_id = "ami-033b95fb8079dc481"
-  instance_type = "t2.micro"
-  key_pair = module.key_pair.key_pair
-  security_group = module.sg.sg_private
-  user_data = "files/user_data.sh"
-  tags_common = var.tags_common
+  source                               = "./modules/launch_template"
+  associate_public_ip_address          = var.associate_public_ip_address
+  name                                 = var.project_name
+  instance_initiated_shutdown_behavior = var.instance_initiated_shutdown_behavior
+  instance_profile                     = module.iam.instance_profile
+  image_id                             = var.image_id
+  instance_type                        = var.instance_type
+  key_pair                             = module.key_pair.key_pair
+  common_tags                          = var.common_tags
+  security_group                       = module.sg.sg_private
+  user_data                            = var.user_data
 }
 
 module "asg" {
-  source = "./modules/asg"
-  name = "cloudx"
-  max_size = 6
-  min_size = 3
-  subnets_private = module.subnet.subnets_private
-  launch_template = module.launch_template.launch_template
-  subnets_private_set = module.subnet.subnets_private_set
+  source              = "./modules/asg"
+  name                = var.project_name
+  max_size            = var.max_size
+  min_size            = var.min_size
+  subnets_private     = module.subnet.subnets_private_ec2
+  launch_template     = module.launch_template.launch_template
   lb_target_group_arn = module.lb.lb_target_group_arn
-  tags = var.tags_common
+  tags                = var.common_tags
 }
 
 module "lb" {
-  source = "./modules/lb"
-  lb_name = "cloudx"
-  tags_common = var.tags_common
-  sg_lb = module.sg.sg_public
-  subnets_public = module.subnet.subnets_public
-  lb_listener_name = "cloudx"
-  lb_listener_port = 80
-  lb_listener_protocol = "HTTP"
-  target_group_name = "cloudx"
-  target_group_port = 80
-  target_group_protocol = "HTTP"
-  vpc_id = module.vpc.vpc_id
+  source                     = "./modules/lb"
+  name                       = var.project_name
+  lb_internal                = var.lb_internal
+  lb_type                    = var.lb_type
+  enable_deletion_protection = var.enable_deletion_protection
+  sg_lb                      = module.sg.sg_public
+  subnets_public             = module.subnet.subnets_public
+  lb_listener_port           = var.lb_listener_port
+  lb_listener_protocol       = var.lb_listener_protocol
+  target_group_port          = var.target_group_port
+  target_group_protocol      = var.target_group_protocol
+  vpc_id                     = module.vpc.vpc_id
 }
 
 module "db" {
-  source = "./modules/db"
-  name = "cloudx"
-  availability_zone_primary = "us-east-1a"
-  availability_zone_replica1 = "us-east-1b"
-  availability_zone_replica2 = "us-east-1c"
-  backup_retention_period = 20
-  subnets_private_db = toset([for subnet in module.subnet.subnets_private_db: subnet.subnet])
-  sg_private_db = module.sg.sg_private_db
-  allocated_storage = 20
-  engine = "mysql"
-  engine_version = "8.0"
-  instance_class = "db.t2.micro"
-  username = "admin"
-  db_password = var.db_password
-  parameter_group_name = "default.mysql8.0"
-  storage_type = "gp2"
-  tags_common = var.tags_common
+  source                  = "./modules/db"
+  azs                     = var.azs
+  name                    = var.project_name
+  availability_zones      = module.subnet.availability_zones
+  backup_retention_period = var.backup_retention_period
+  subnets_private_db      = module.subnet.subnets_private_db
+  sg_private_db           = module.sg.sg_private_db
+  allocated_storage       = var.allocated_storage
+  engine                  = var.engine
+  engine_version          = var.engine_version
+  instance_class          = var.instance_class
+  multi_az                = var.multi_az
+  username                = var.username
+  db_password             = var.db_password
+  parameter_group_name    = var.parameter_group_name
+  skip_final_snapshot     = var.skip_final_snapshot
+  storage_type            = var.storage_type
 }

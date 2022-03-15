@@ -1,15 +1,14 @@
-variable "tags_common" {
-  description = "Common tags for all resources"
-}
-
-variable "vpc_name" {
-  description = "Provides VPC CIDR"
-  type        = string
-  default     = "CloudX"
-}
-
 variable "vpc_cidr" {
   description = "Provides VPC CIDR"
   type        = string
-  default     = "10.10.0.0/16"
+}
+
+variable "enable_dns_support" {
+  description = "Enable DNS support option"
+  type        = bool
+}
+
+variable "enable_dns_hostnames" {
+  description = "Enable DNS hostnames"
+  type        = bool
 }

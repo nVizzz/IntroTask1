@@ -3,7 +3,30 @@ resource "aws_security_group" "public" {
   description = "allows access for public networks"
   vpc_id      = var.vpc_id
 
-  tags = merge(var.tags_common, {Name = "SG-Public"})
+
+  dynamic "ingress" {
+    for_each = var.public_inbound
+    content {
+      description = ingress.key
+      from_port   = ingress.value["from_port"]
+      to_port     = ingress.value["to_port"]
+      protocol    = ingress.value["protocol"]
+      cidr_blocks = [ingress.value["cidr_block"]]
+    }
+  }
+
+  dynamic "egress" {
+    for_each = var.public_outbound
+    content {
+      description = egress.key
+      from_port   = egress.value["from_port"]
+      to_port     = egress.value["to_port"]
+      protocol    = egress.value["protocol"]
+      cidr_blocks = [egress.value["cidr_block"]]
+    }
+  }
+
+  tags = { Name = "SG-Public" }
 }
 
 resource "aws_security_group" "private" {
@@ -11,73 +34,59 @@ resource "aws_security_group" "private" {
   description = "allows access for private networks"
   vpc_id      = var.vpc_id
 
-  tags = merge(var.tags_common, {Name = "SG-Private"})
+
+  dynamic "ingress" {
+    for_each = var.private_inbound
+    content {
+      description = ingress.key
+      from_port   = ingress.value["from_port"]
+      to_port     = ingress.value["to_port"]
+      protocol    = ingress.value["protocol"]
+      cidr_blocks = [ingress.value["cidr_block"]]
+    }
+  }
+
+  dynamic "egress" {
+    for_each = var.private_outbound
+    content {
+      description = egress.key
+      from_port   = egress.value["from_port"]
+      to_port     = egress.value["to_port"]
+      protocol    = egress.value["protocol"]
+      cidr_blocks = [egress.value["cidr_block"]]
+    }
+  }
+
+  tags = { Name = "SG-Private" }
 }
 
 resource "aws_security_group" "private_db" {
   name        = "private_db"
-  description = "allows access for database networks"
+  description = "allows access for private_db networks"
   vpc_id      = var.vpc_id
 
-  tags = merge(var.tags_common, {Name = "SG-Private_DB"})
-}
 
-resource "aws_security_group_rule" "public_inbound" {
-  for_each = var.public_inbound
+  dynamic "ingress" {
+    for_each = var.private_db_inbound
+    content {
+      description = ingress.key
+      from_port   = ingress.value["from_port"]
+      to_port     = ingress.value["to_port"]
+      protocol    = ingress.value["protocol"]
+      cidr_blocks = [ingress.value["cidr_block"]]
+    }
+  }
 
-  type                     = "ingress"
-  from_port                = each.value["port"]
-  to_port                  = each.value["port"]
-  protocol                 = each.value["protocol"]
-  cidr_blocks               = [each.value["cidr_block"]]
-  security_group_id        = aws_security_group.public.id
-}
+  dynamic "egress" {
+    for_each = var.private_db_outbound
+    content {
+      description = egress.key
+      from_port   = egress.value["from_port"]
+      to_port     = egress.value["to_port"]
+      protocol    = egress.value["protocol"]
+      cidr_blocks = [egress.value["cidr_block"]]
+    }
+  }
 
-resource "aws_security_group_rule" "public_outbound" {
-  type              = "egress"
-  from_port         = 0
-  to_port           = 65535
-  protocol          = "-1"
-  cidr_blocks       = ["0.0.0.0/0"]
-  security_group_id = aws_security_group.public.id
-}
-
-resource "aws_security_group_rule" "private_inbound" {
-  for_each = var.private_inbound
-
-  type                     = "ingress"
-  from_port                = each.value["port"]
-  to_port                  = each.value["port"]
-  protocol                 = each.value["protocol"]
-  cidr_blocks               = [each.value["cidr_block"]]
-  security_group_id        = aws_security_group.private.id
-}
-
-resource "aws_security_group_rule" "private_outbound" {
-  type              = "egress"
-  from_port         = 0
-  to_port           = 65535
-  protocol          = "-1"
-  cidr_blocks       = ["0.0.0.0/0"]
-  security_group_id = aws_security_group.private.id
-}
-
-resource "aws_security_group_rule" "private_db_inbound" {
-  for_each = var.private_db_inbound
-
-  type                     = "ingress"
-  from_port                = each.value["port"]
-  to_port                  = each.value["port"]
-  protocol                 = each.value["protocol"]
-  cidr_blocks              = [each.value["cidr_block"]]
-  security_group_id        = aws_security_group.private_db.id
-}
-
-resource "aws_security_group_rule" "private_db_outbound" {
-  type              = "egress"
-  from_port         = 0
-  to_port           = 65535
-  protocol          = "-1"
-  cidr_blocks       = ["0.0.0.0/0"]
-  security_group_id = aws_security_group.private_db.id
+  tags = { Name = "SG-Private_DB" }
 }

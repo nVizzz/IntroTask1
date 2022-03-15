@@ -1,6 +1,9 @@
 # This is a basic workflow to help you get started with Actions
 
 name: CI
+env:
+  app_name: "cloudx"
+  package_name: "cloudx-deploy-${{ github.sha }}"
 
 # Controls when the workflow will run
 on:
@@ -32,6 +35,7 @@ jobs:
         run: |
           echo Add other actions to build,
           echo test, and deploy your project.
+          echo Testing app ${{ env.app_name }}
 
   cloudx_deployment:
     runs-on: ubuntu-latest
@@ -41,4 +45,6 @@ jobs:
       - name: Run a one-line script
         run: echo Hello, deployment world!
       - name: Run another one-line script
-        run: echo Hello again, deployment world!
+        run: |
+          echo Hello again, deployment world!
+          echo Deploy packege name is ${{ env.package_name }}
